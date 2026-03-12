@@ -1,0 +1,15 @@
+name: rightsignals
+version: 0.1.0
+crystal: ">= 1.10.0"
+license: MIT
+
+authors:
+  - RightSignals Support <support@rightsignals.com>
+
+description: Crystal SDK for the RightSignals API
+
+dependencies: {}
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
+    version: ~> 1.6

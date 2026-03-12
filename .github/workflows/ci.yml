@@ -1,0 +1,75 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  repository_dispatch:
+    types: [sdk-updated]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crystal-lang/install-crystal@v1
+      - run: shards install
+      - run: crystal spec
+
+  release:
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'repository_dispatch'
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-linux
+            artifact: rightsignals-linux-amd64
+          - os: macos-13
+            target: x86_64-darwin
+            artifact: rightsignals-darwin-amd64
+          - os: macos-14
+            target: aarch64-darwin
+            artifact: rightsignals-darwin-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crystal-lang/install-crystal@v1
+      - run: shards install
+      - run: shards build --release --no-debug
+      - run: mv bin/rightsignals bin/${{ matrix.artifact }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: bin/${{ matrix.artifact }}
+
+  publish:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Read version
+        id: version
+        run: echo "version=$(grep '^version:' shard.yml | awk '{print $2}')" >> $GITHUB_OUTPUT
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          files: artifacts/*
+          generate_release_notes: true
+
+      - name: Notify Homebrew tap
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.REPO_DISPATCH_TOKEN }}
+          repository: aluminumio/homebrew-tap
+          event-type: cli-released
+          client-payload: '{"version": "${{ steps.version.outputs.version }}"}'

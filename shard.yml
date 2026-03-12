@@ -1,0 +1,21 @@
+name: rightsignals-cli
+version: 0.1.0
+crystal: ">= 1.10.0"
+license: MIT
+
+authors:
+  - RightSignals Support <support@rightsignals.com>
+
+targets:
+  rightsignals:
+    main: src/main.cr
+
+dependencies:
+  rightsignals:
+    github: aluminumio/rightsignals-crystal-sdk
+    version: ~> 0.1.0
+
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
+    version: ~> 1.6
