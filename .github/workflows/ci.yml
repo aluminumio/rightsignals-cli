@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: crystal-lang/install-crystal@v1
+      - uses: aluminumio/install-crystal@master
       - run: shards install
       - run: crystal spec
 
@@ -30,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: crystal-lang/install-crystal@v1
+      - uses: aluminumio/install-crystal@master
       - run: shards install
       - run: shards build --release --no-debug
       - run: mv bin/rightsignals bin/${{ matrix.artifact }}
