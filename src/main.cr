@@ -3,7 +3,7 @@ require "option_parser"
 require "json"
 
 module RightSignalsCLI
-  VERSION = "0.1.0"
+  VERSION = "0.2.0"
 
   struct Config
     property base_url : String
@@ -20,8 +20,6 @@ module RightSignalsCLI
     json_output = false
     limit : Int32? = nil
 
-    command = args.shift? || "help"
-
     parser = OptionParser.new do |p|
       p.on("-j", "--json", "Output raw JSON") { json_output = true }
       p.on("-l LIMIT", "--limit=LIMIT", "Max results") { |v| limit = v.to_i }
@@ -29,8 +27,13 @@ module RightSignalsCLI
       p.on("-t TOKEN", "--token=TOKEN", "API token") { |v| config.token = v }
       p.on("-v", "--version", "Show version") { puts VERSION; exit }
       p.on("-h", "--help", "Show help") { print_help; exit }
+      p.unknown_args { }
     end
     parser.parse(args)
+
+    positional = args.reject { |a| a.starts_with?("-") }
+    command = positional[0]? || "help"
+    id = positional[1]?.try(&.to_i64?)
 
     if command == "version"
       puts VERSION
@@ -50,7 +53,6 @@ module RightSignalsCLI
 
     case command
     when "traces"
-      id = args.shift?.try(&.to_i64?)
       if id
         trace = client.get_trace(id)
         json_output ? puts(trace.to_json) : print_trace(trace)
@@ -59,7 +61,6 @@ module RightSignalsCLI
         json_output ? puts(traces.to_json) : print_traces(traces)
       end
     when "issues"
-      id = args.shift?.try(&.to_i64?)
       if id
         issue = client.get_issue(id)
         json_output ? puts(issue.to_json) : print_issue(issue)
@@ -68,7 +69,6 @@ module RightSignalsCLI
         json_output ? puts(issues.to_json) : print_issues(issues)
       end
     when "occurrences"
-      id = args.shift?.try(&.to_i64?)
       if id
         occ = client.get_occurrence(id)
         json_output ? puts(occ.to_json) : print_occurrence(occ)
@@ -77,7 +77,6 @@ module RightSignalsCLI
         json_output ? puts(occs.to_json) : print_occurrences(occs)
       end
     when "events"
-      id = args.shift?.try(&.to_i64?)
       if id
         event = client.get_event(id)
         json_output ? puts(event.to_json) : print_event(event)
@@ -85,10 +84,6 @@ module RightSignalsCLI
         events = client.list_events(limit: limit)
         json_output ? puts(events.to_json) : print_events(events)
       end
-    when "version"
-      puts VERSION
-    when "help"
-      print_help
     else
       STDERR.puts "Unknown command: #{command}"
       print_help
