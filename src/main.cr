@@ -3,7 +3,7 @@ require "option_parser"
 require "json"
 
 module RightSignalsCLI
-  VERSION = "0.2.0"
+  VERSION = "0.2.1"
 
   struct Config
     property base_url : String
