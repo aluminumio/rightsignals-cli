@@ -12,7 +12,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: crystal-lang/install-crystal@v1
       - run: shards install
       - run: crystal spec
@@ -24,17 +24,12 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: x86_64-linux
             artifact: rightsignals-linux-amd64
-          - os: macos-13
-            target: x86_64-darwin
-            artifact: rightsignals-darwin-amd64
-          - os: macos-14
-            target: aarch64-darwin
+          - os: macos-15
             artifact: rightsignals-darwin-arm64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: crystal-lang/install-crystal@v1
       - run: shards install
       - run: shards build --release --no-debug
@@ -50,7 +45,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
