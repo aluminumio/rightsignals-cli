@@ -34,7 +34,7 @@ jobs:
       - run: shards install
       - run: shards build --release --no-debug
       - run: mv bin/rightsignals bin/${{ matrix.artifact }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: bin/${{ matrix.artifact }}
@@ -46,7 +46,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
@@ -63,7 +63,7 @@ jobs:
           generate_release_notes: true
 
       - name: Notify Homebrew tap
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@v4
         with:
           token: ${{ secrets.REPO_DISPATCH_TOKEN }}
           repository: aluminumio/homebrew-tap
