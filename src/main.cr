@@ -3,7 +3,7 @@ require "option_parser"
 require "json"
 
 module RightSignalsCLI
-  VERSION = "0.2.2"
+  VERSION = "0.3.0"
 
   struct Config
     property base_url : String
@@ -19,10 +19,16 @@ module RightSignalsCLI
     config = Config.new
     json_output = false
     limit : Int32? = nil
+    status : String? = nil
+    service : String? = nil
+    environment : String? = nil
 
     parser = OptionParser.new do |p|
       p.on("-j", "--json", "Output raw JSON") { json_output = true }
       p.on("-l LIMIT", "--limit=LIMIT", "Max results") { |v| limit = v.to_i }
+      p.on("-s STATUS", "--status=STATUS", "Filter by status") { |v| status = v }
+      p.on("--service=ID", "Filter by service ID") { |v| service = v }
+      p.on("-e ENV", "--environment=ENV", "Filter by environment") { |v| environment = v }
       p.on("-u URL", "--url=URL", "API base URL") { |v| config.base_url = v }
       p.on("-t TOKEN", "--token=TOKEN", "API token") { |v| config.token = v }
       p.on("-v", "--version", "Show version") { puts VERSION; exit }
@@ -51,13 +57,15 @@ module RightSignalsCLI
 
     client = RightSignals::Client.new(base_url: config.base_url, token: config.token)
 
+    sid = service.try(&.to_i64?)
+
     case command
     when "traces"
       if id
         trace = client.get_trace(id)
         json_output ? puts(trace.to_json) : print_trace(trace)
       else
-        traces = client.list_traces(limit: limit)
+        traces = client.list_traces(service_id: sid, environment: environment, limit: limit)
         json_output ? puts(traces.to_json) : print_traces(traces)
       end
     when "issues"
@@ -65,7 +73,7 @@ module RightSignalsCLI
         issue = client.get_issue(id)
         json_output ? puts(issue.to_json) : print_issue(issue)
       else
-        issues = client.list_issues(limit: limit)
+        issues = client.list_issues(service_id: sid, environment: environment, status: status, limit: limit)
         json_output ? puts(issues.to_json) : print_issues(issues)
       end
     when "occurrences"
@@ -73,7 +81,7 @@ module RightSignalsCLI
         occ = client.get_occurrence(id)
         json_output ? puts(occ.to_json) : print_occurrence(occ)
       else
-        occs = client.list_occurrences(limit: limit)
+        occs = client.list_occurrences(service_id: sid, environment: environment, limit: limit)
         json_output ? puts(occs.to_json) : print_occurrences(occs)
       end
     when "events"
@@ -81,8 +89,24 @@ module RightSignalsCLI
         event = client.get_event(id)
         json_output ? puts(event.to_json) : print_event(event)
       else
-        events = client.list_events(limit: limit)
+        events = client.list_events(service_id: sid, limit: limit)
         json_output ? puts(events.to_json) : print_events(events)
+      end
+    when "issues:resolve"
+      if id
+        issue = client.resolve_issue(id)
+        puts "Resolved issue ##{id}: #{issue.summary}"
+      else
+        STDERR.puts "Usage: rightsignals issues:resolve <issue-id>"
+        exit 1
+      end
+    when "issues:reopen"
+      if id
+        issue = client.reopen_issue(id)
+        puts "Reopened issue ##{id}: #{issue.summary}"
+      else
+        STDERR.puts "Usage: rightsignals issues:reopen <issue-id>"
+        exit 1
       end
     else
       STDERR.puts "Unknown command: #{command}"
@@ -111,16 +135,21 @@ module RightSignalsCLI
       issues [id]       List issues or show one
       occurrences [id]  List occurrences or show one
       events [id]       List events or show one
+      issues:resolve <id>   Resolve an issue
+      issues:reopen <id>    Reopen an issue
       version           Show version
       help              Show this help
 
     Options:
-      -j, --json          Output raw JSON
-      -l, --limit=N       Max results (default: 25)
-      -u, --url=URL       API base URL (or RIGHTSIGNALS_URL env)
-      -t, --token=TOKEN   API token (or RIGHTSIGNALS_TOKEN env)
-      -v, --version       Show version
-      -h, --help          Show help
+      -j, --json              Output raw JSON
+      -l, --limit=N           Max results (default: 25)
+      -s, --status=STATUS     Filter by status (open/resolved)
+          --service=ID        Filter by service ID
+      -e, --environment=ENV   Filter by environment
+      -u, --url=URL           API base URL (or RIGHTSIGNALS_URL env)
+      -t, --token=TOKEN       API token (or RIGHTSIGNALS_TOKEN env)
+      -v, --version           Show version
+      -h, --help              Show help
     HELP
   end
 
