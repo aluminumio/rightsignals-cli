@@ -27,7 +27,7 @@ module RightSignalsCLI
       p.on("-j", "--json", "Output raw JSON") { json_output = true }
       p.on("-l LIMIT", "--limit=LIMIT", "Max results") { |v| limit = v.to_i }
       p.on("-s STATUS", "--status=STATUS", "Filter by status") { |v| status = v }
-      p.on("--service=ID", "Filter by service ID") { |v| service = v }
+      p.on("--service=NAME", "Filter by service name") { |v| service = v }
       p.on("-e ENV", "--environment=ENV", "Filter by environment") { |v| environment = v }
       p.on("-u URL", "--url=URL", "API base URL") { |v| config.base_url = v }
       p.on("-t TOKEN", "--token=TOKEN", "API token") { |v| config.token = v }
@@ -57,15 +57,13 @@ module RightSignalsCLI
 
     client = RightSignals::Client.new(base_url: config.base_url, token: config.token)
 
-    sid = service.try(&.to_i64?)
-
     case command
     when "traces"
       if id
         trace = client.get_trace(id)
         json_output ? puts(trace.to_json) : print_trace(trace)
       else
-        traces = client.list_traces(service_id: sid, environment: environment, limit: limit)
+        traces = client.list_traces(service: service, environment: environment, limit: limit)
         json_output ? puts(traces.to_json) : print_traces(traces)
       end
     when "issues"
@@ -73,7 +71,7 @@ module RightSignalsCLI
         issue = client.get_issue(id)
         json_output ? puts(issue.to_json) : print_issue(issue)
       else
-        issues = client.list_issues(service_id: sid, environment: environment, status: status, limit: limit)
+        issues = client.list_issues(service: service, environment: environment, status: status, limit: limit)
         json_output ? puts(issues.to_json) : print_issues(issues)
       end
     when "occurrences"
@@ -81,7 +79,7 @@ module RightSignalsCLI
         occ = client.get_occurrence(id)
         json_output ? puts(occ.to_json) : print_occurrence(occ)
       else
-        occs = client.list_occurrences(service_id: sid, environment: environment, limit: limit)
+        occs = client.list_occurrences(service: service, environment: environment, limit: limit)
         json_output ? puts(occs.to_json) : print_occurrences(occs)
       end
     when "events"
@@ -89,7 +87,7 @@ module RightSignalsCLI
         event = client.get_event(id)
         json_output ? puts(event.to_json) : print_event(event)
       else
-        events = client.list_events(service_id: sid, limit: limit)
+        events = client.list_events(service: service, limit: limit)
         json_output ? puts(events.to_json) : print_events(events)
       end
     when "issues:resolve"
@@ -144,7 +142,7 @@ module RightSignalsCLI
       -j, --json              Output raw JSON
       -l, --limit=N           Max results (default: 25)
       -s, --status=STATUS     Filter by status (open/resolved)
-          --service=ID        Filter by service ID
+          --service=NAME      Filter by service name
       -e, --environment=ENV   Filter by environment
       -u, --url=URL           API base URL (or RIGHTSIGNALS_URL env)
       -t, --token=TOKEN       API token (or RIGHTSIGNALS_TOKEN env)
