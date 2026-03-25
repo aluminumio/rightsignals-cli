@@ -46,6 +46,7 @@ describe "RightSignalsCLI" do
     output.should contain("--status")
     output.should contain("--service")
     output.should contain("--environment")
+    output.should contain("default: open")
   end
 
   it "errors on issues:resolve without id" do

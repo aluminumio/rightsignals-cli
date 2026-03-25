@@ -3,7 +3,7 @@ require "option_parser"
 require "json"
 
 module RightSignalsCLI
-  VERSION = "0.4.0"
+  VERSION = "0.5.0"
 
   struct Config
     property base_url : String
@@ -71,7 +71,7 @@ module RightSignalsCLI
         issue = client.get_issue(id)
         json_output ? puts(issue.to_json) : print_issue(issue)
       else
-        issues = client.list_issues(service: service, environment: environment, status: status, limit: limit)
+        issues = client.list_issues(service: service, environment: environment, status: status || "open", limit: limit)
         json_output ? puts(issues.to_json) : print_issues(issues)
       end
     when "occurrences"
@@ -141,7 +141,7 @@ module RightSignalsCLI
     Options:
       -j, --json              Output raw JSON
       -l, --limit=N           Max results (default: 25)
-      -s, --status=STATUS     Filter by status (open/resolved)
+      -s, --status=STATUS     Filter by status (default: open for issues)
           --service=NAME      Filter by service name
       -e, --environment=ENV   Filter by environment
       -u, --url=URL           API base URL (or RIGHTSIGNALS_URL env)
@@ -157,7 +157,7 @@ module RightSignalsCLI
     traces.each do |t|
       puts "%-30s %-14s %-16s %6d %10s  %s" % [
         truncate(t.root_span || "unknown", 30), t.trace_id[0, 12],
-        truncate(t.service, 16), t.span_count, t.duration || "n/a", t.started_at || "n/a",
+        truncate(t.service, 16), t.span_count, t.duration || "n/a", time_ago(t.started_at),
       ]
     end
   end
@@ -179,7 +179,7 @@ module RightSignalsCLI
     issues.each do |i|
       puts "%-6d %-8s %-40s %-16s %5d  %s" % [
         i.id, i.status, truncate(i.summary, 40), truncate(i.service, 16),
-        i.occurrence_count, i.last_seen_at || "n/a",
+        i.occurrence_count, time_ago(i.last_seen_at),
       ]
     end
   end
@@ -188,14 +188,14 @@ module RightSignalsCLI
     puts "Issue ##{i.id}: #{i.summary}"
     puts "Status: #{i.status}  Service: #{i.service}  Environment: #{i.environment || "n/a"}"
     puts "Occurrences: #{i.occurrence_count}  Regressed: #{i.regressed}"
-    puts "First: #{i.first_seen_at || "n/a"}  Last: #{i.last_seen_at || "n/a"}"
+    puts "First: #{time_ago(i.first_seen_at)}  Last: #{time_ago(i.last_seen_at)}"
     if st = i.stack_trace
       puts "\nStack trace:\n#{st}"
     end
     if i.recent_occurrences.size > 0
       puts "\nRecent occurrences:"
       i.recent_occurrences.each do |o|
-        puts "  ##{o.id} #{o.exception_type}: #{o.message || "n/a"} (#{o.occurred_at || "n/a"})"
+        puts "  ##{o.id} #{o.exception_type}: #{o.message || "n/a"} (#{time_ago(o.occurred_at)})"
       end
     end
   end
@@ -206,7 +206,7 @@ module RightSignalsCLI
     occs.each do |o|
       puts "%-6d %-24s %-40s %-16s  %s" % [
         o.id, truncate(o.exception_type, 24), truncate(o.message || "", 40),
-        truncate(o.service, 16), o.occurred_at || "n/a",
+        truncate(o.service, 16), time_ago(o.occurred_at),
       ]
     end
   end
@@ -226,7 +226,7 @@ module RightSignalsCLI
     events.each do |e|
       puts "%-6d %-20s %-16s %-24s  %s" % [
         e.id, truncate(e.event_name || "unnamed", 20), truncate(e.service, 16),
-        truncate(e.user_email || "n/a", 24), e.timestamp || "n/a",
+        truncate(e.user_email || "n/a", 24), time_ago(e.timestamp),
       ]
     end
   end
@@ -242,6 +242,23 @@ module RightSignalsCLI
 
   private def self.truncate(s : String, max : Int32) : String
     s.size > max ? s[0, max - 1] + "…" : s
+  end
+
+  private def self.time_ago(iso : String?) : String
+    return "n/a" unless iso
+    t = Time.parse_iso8601(iso)
+    delta = Time.utc - t
+    if delta.total_seconds < 60
+      "just now"
+    elsif delta.total_minutes < 60
+      "#{delta.total_minutes.to_i}m ago"
+    elsif delta.total_hours < 24
+      "#{delta.total_hours.to_i}h ago"
+    elsif delta.total_hours < 48
+      "yesterday"
+    else
+      "#{(delta.total_hours / 24).to_i}d ago"
+    end
   end
 end
 
